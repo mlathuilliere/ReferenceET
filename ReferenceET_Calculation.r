@@ -3,39 +3,38 @@ library(openair)
 library(Hmisc)
 
 #-------------------------------------------------------------------------------
-## input/output file paths
+## Input/output file paths
 
 input.path  <- "C:/Users/Mike/Dropbox/PhD/Research/Part I/DataAnalysis/Soyflux_CR1000.csv"
-output.path <- "C:/users/Mike/Desktop/Reference_ET.pdf"
+output.path.graph <- "C:/users/Mike/Desktop/Reference_ET.pdf"
+output.path.table <- "C:/users/Mike/Desktop/Reference_ET.txt"
 
 #-------------------------------------------------------------------------------
-##Input file location of .csv file for the climate station considered
+## Input file location of .csv file for the climate station considered
 
 Station <-
   read.table(input.path, header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE)
 
 #-------------------------------------------------------------------------------
-##Input altitude, latitude and name of the climate station 
+## Input altitude, latitude and name of the climate station 
 
 Location <- "Capuaba Farm"
 z        <- 426.9                      #altitude in m
 lat      <- -13.2875                   #latitude in decimal degrees
-long     <- 50.0882                    # longitude in decimal degrees
-Lz       <- 60                         # Longitude of center of time zone
-timestep <- 0.5                        # 0.5 for 30 min time step, or 1 for hourly
+long     <- 50.0882                    #longitude in decimal degrees
+Lz       <- 60                         #Longitude of center of time zone
+timestep <- 0.5                        #0.5 for 30 min time step, or 1 for hourly
 Wheight  <- 3.40                       #height of the sensor measuring wind speed, in m
 
 #input albedo assumptions or measurements
 alpha.ref  <- 0.23
-alpha.crop <- 0.20       #assumption 
 
 #input days of interest for planting season
 start <- "2015-10-02"
 end   <- "2016-02-01"
 
-
 #-------------------------------------------------------------------------------
-# Date conversion
+## Date conversion
 
 Station$timestamp     <- as.POSIXct(Station$timestamp, "%m/%d/%Y %H:%M", tz="GMT")        
 Station$timestamp.AMT <- as.POSIXct(Station$timestamp, "%m/%d/%Y %H:%M", tz="GMT")
@@ -56,11 +55,12 @@ Station <- selectByDate(Station, start = start, end = end)
 #-------------------------------------------------------------------------------
 ## Propagation of error based on measurements
 
-e.Tair <- 0.3                                         # error from the Vaisala WXT520 (oC)
-e.Ws   <- 0.3                                         # error from the Vaisala WXT520 (m/s)
-e.RH   <- 4                                           # error from the Vaisala WXT520 (%)
-e.Pair <- 0.5                                         # error from the Vaisala WXT520 (hPa)
-e.Rs   <- 0.03*Station$Rs                             # error from LI200X pyranometer
+e.Tair <- 0.3                                         #error from the Vaisala WXT520 (oC)
+e.Ws   <- 0.3                                         #error from the Vaisala WXT520 (m/s)
+e.RH   <- 4                                           #error from the Vaisala WXT520 (%)
+e.Pair <- 0.5                                         #error from the Vaisala WXT520 (hPa)
+e.Rs   <- 0.03*Station$Rs                             #error from LI200X pyranometer
+e.Wheight <- 0.5                                      #error in positioning of Vaisala WXY520 (cm)
 
 #-------------------------------------------------------------------------------
 ## List of variables, constants used in the calculation
@@ -69,13 +69,12 @@ attach(Station)
 
 uz <- Ws                                              #rename mean wind speed in m/s  
 Station$lambda <- 2.501 - (2.361*0.001)*Tair          #Temperature dependent latent heat of vapourization (MJ/kg)
-Station$e.lambda <- 0.3*(2.361*0.001)                 #error in the latent heat
+Station$e.lambda <- 0.3*(2.361*0.001)                 #error in the latent heat of vapourization (MJ/kg)
 Cp <- 1.013*10^-3                                     #Specific heat capacity at constant P (MJ/kg.degC)
 sigma <- 4.903*10^-9                                  #Boltzmann constant in MJ/K^4m^2day
 Station$u2 <- uz*(4.87/(log(67.8*Wheight-5.42)))      #Wind speed at 2m height calculated from uz, equation (47) 
 
 # error in u2, wind speed at 2 m height
-e.Wheight <- 0.5                                      # error in height measurement in cm
 df1   <- 67.8*Wheight
 e.df1 <- df1*(0.5/3.4) 
 df2   <- log(67.8*Wheight-5.42)
@@ -86,7 +85,7 @@ e.df3 <- 4.67*e.df2/df2
 Station$e.u2 <- Station$u2*sqrt( (e.Ws/Ws)^2 + (e.df3/df3)^2 ) 
 
 #-------------------------------------------------------------------------------
-##Calculation of the psychrometric constant 'gamm' (kPa/degC), equation (8)
+## Calculation of the psychrometric constant 'gamm' (kPa/degC), equation (8)
 
 Station$gamm <- (Cp*Pair*0.1)/(0.622*Station$lambda)
 
@@ -99,12 +98,12 @@ e.df5 <- Cp*0.1*e.Pair
 Station$e.gamm <- Station$gamm*sqrt( (e.df4/df4)^2 + (e.df5/df5)^2 )
 
 #-------------------------------------------------------------------------------
-##Calculation of the vapour pressure deficit (es - ea) (kPa)
+## Calculation of the vapour pressure deficit (es - ea) (kPa)
 
 #Saturation vapour pressure 'es' (kPa), equation (11)
 Station$es <- signif(0.6108*exp(17.27*Tair/(Tair+237.3)), digits = 3)     # keep 3 sig. figs
 
-# error in es
+#error in es
 df6   <- 17.27*Tair
 e.df6 <- df6*(e.Tair/Tair)
 df7   <- df6/(Tair + 237.3)
@@ -124,18 +123,18 @@ Station$VPD   <- signif(Station$es - Station$ea, digits = 3)              # keep
 Station$e.VPD <- sqrt( (Station$e.es)^2 + (Station$e.ea)^2 ) 
 
 #-------------------------------------------------------------------------------
-##Calculation of the slope of the saturated vapour pressure curve, Delta (kPa/degC)
+## Calculation of the slope of the saturated vapour pressure curve, Delta (kPa/degC)
 
-Station$delta   <- signif(4098*(0.6108*exp((17.27*Tair)/(Tair+237.3)))/((Tair+237.3)^2), digits = 3) # keep 3 sig. figs
+Station$Delta   <- signif(4098*(0.6108*exp((17.27*Tair)/(Tair+237.3)))/((Tair+237.3)^2), digits = 3) # keep 3 sig. figs
 
-#error in delta
+#error in Delta
 e.df8 <- 2*(e.Tair/(Tair + 237.3))                                                                   
 df9   <- df6/((Tair + 237.3)^2)
 e.df9 <- df9*sqrt( (e.df8/((Tair + 237.3)^2))^2 + (e.df6/df6)^2 )
-Station$e.delta <- 4098*(Station$delta*e.df9)
+Station$e.Delta <- 4098*(Station$Delta*e.df9)
 
 #-------------------------------------------------------------------------------
-# Calculation of the extraterrestrial radiation (Ra) equation (28)
+## Calculation of the extraterrestrial radiation (Ra) equation (28)
 
 ##Input longitude (fi) and latitude (lat)
 fi <- signif((pi/180)*(lat), digits = 4)         ##in rad, equation (22), keep 4 significant figures
@@ -162,10 +161,10 @@ Station$Ra.MJ <- signif((24*60/pi)*Gsc*dr*((w2 - w1)*sin(fi)*sin(delta)+cos(fi)*
 Station$Ra.MJ <- ifelse(Station$Ra.MJ <0, 0, Station$Ra.MJ)     # if the solar angle is negative (nighttime) then Ra = 0
 
 #Convert Ra into W/m2.s
-Station$Ra.W <- Ra.MJ*10^6/(3600*24)
+Station$Ra.W <- Station$Ra.MJ*10^6/(3600*24)
 
 #-------------------------------------------------------------------------------
-# Determination of theoretical Rn for reference grass crop 
+## Determination of theoretical Rn for reference grass crop 
 
 #Conversion of Rs into MJ/m2-30min
 Station$Rs.MJ   <- Station$Rs*3600*0.5*10^-6
@@ -176,7 +175,7 @@ Station$Rns.MJ <- (1 - alpha.ref)*Station$Rs.MJ            # net shortwave radia
 Station$e.Rns.MJ <- (1 - alpha.ref)*Station$e.Rs.MJ        # error in Rns.MJ (MJ/m2-30min)
 
 #Calculation of clear sky net shortwave radiation (Rso), equation (37)
-Station$Rso.MJ <- (0.75 + z*2*10^-5)*Station$Ra.MJ          # clear sky net shortwave radiation (MJ/m2-30min)
+Station$Rso.MJ <- (0.75 + z*2*10^-5)*Station$Ra.MJ         # clear sky net shortwave radiation (MJ/m2-30min)
 
 #Calculation of net longwave radiation (Rnl), equation (39)
 Rs.Rso <- ifelse(Station$Rso.MJ == 0, 0.5, Station$Rs.MJ/Station$Rso.MJ)   
@@ -197,7 +196,7 @@ Station$Rn.MJ.grass <- Station$Rns.MJ - Station$Rnl.MJ     # in MJ/m2-30min
 Station$e.Rn.MJ.grass <- ifelse(Station$Rso.MJ == 0, Station$e.Rns.MJ, Station$e.Rns.MJ + Station$e.Rnl.MJ)    #error in Rn.MJ.grass
 
 #-------------------------------------------------------------------------------
-#Ground heat flux measurements
+## Ground heat flux measurements
 
 #Create data frame for all G sensor measurements
 G <- data.frame()
@@ -215,14 +214,14 @@ Station$e.G.MJ <- 0.10*Station$G.MJ
 #-------------------------------------------------------------------------------
 #Calculation of reference ET (ET0), in mm/30min, equation (6)
 
-Station$ET0 <- (0.408*Station$delta*(Station$Rn.MJ.grass-Station$G.MJ) + 
-                  Station$gamm*(37/(Tair+273))*Station$u2*Station$VPD)/(Station$delta + Station$gamm*(1+0.34*Station$u2))
+Station$ET0 <- (0.408*Station$Delta*(Station$Rn.MJ.grass-Station$G.MJ) + 
+                  Station$gamm*(37/(Tair+273))*Station$u2*Station$VPD)/(Station$Delta + Station$gamm*(1+0.34*Station$u2))
 
 Station$ET0 <- signif(Station$ET0, digits = 3)        ##keep 2 significant figures (from ea)
 
 #error in ET0 with 10% error in G values
-df12   <- 0.408*Station$delta*abs(Station$Rn.MJ-Station$G.MJ)
-e.df12 <- df12*sqrt( (Station$e.delta/Station$delta)^2 + ((Station$e.Rn.MR.grass + Station$e.G.MJ)/(Station$Rn.MJ.grass + Station$G.MJ))^2 )
+df12   <- 0.408*Station$Delta*abs(Station$Rn.MJ-Station$G.MJ)
+e.df12 <- df12*sqrt( (Station$e.Delta/Station$Delta)^2 + ((Station$e.Rn.MR.grass + Station$e.G.MJ)/(Station$Rn.MJ.grass + Station$G.MJ))^2 )
 df13   <- Station$gamm*37*Station$u2*Station$VPD
 e.df13 <- df13*sqrt( (Station$e.gamm/Station$gamm)^2 + (Station$e.u2/Station$u2)^2 + (Station$e.VPD/Station$VPD)^2 )
 df14   <- Tair + 273
@@ -241,51 +240,60 @@ Station$e.ET0 <- abs(Station$ET0)*sqrt( (e.df18/df18)^2 + (e.df15/df15)^2 )
 detach(Station)
 
 #-------------------------------------------------------------------------------
-# Take daily averages of the time series
-Station.daily <- timeAverage(Station, avg.time = "day")
-PPT.daily     <- aggregate(Station$Precip, list(day = date), sum)
-Rn.MJ.daily   <- aggregate(Station$Rn.MJ.grass, list(day = date), sum)
-G.MJ.daily    <- aggregate(Station$G.MJ, list(day = date), sum)
-ET0.daily     <- aggregate(Station$ET0, list(day = date), sum) 
-e.ET0.daily   <- aggregate(Station$e.ET0, list(day = date), sum)
+## Take daily averages of the time series
 
-#Create data frame for export of all variables for Reference ET calculation
-Reference.ET <- data.frame(Station.daily$date, Rn.MJ.daily$x, G.MJ.daily$x, ET0.daily$x, e.ET0.daily$x)
+PPT.daily     <- aggregate(Station$Precip, FUN = sum, by = list(Date = Station$date), na.rm = "TRUE")
+Rn.MJ.daily   <- aggregate(Station$Rn.MJ.grass, FUN = sum, by =  list(Date = Station$date), na.rm = "TRUE")
+G.MJ.daily    <- aggregate(Station$G.MJ, FUN = sum, by = list(Date = Station$date), na.rm = "TRUE")
+ET0.daily     <- aggregate(Station$ET0, FUN = sum, by = list(Date = Station$date), na.rm = "TRUE") 
+e.ET0.daily   <- aggregate(Station$e.ET0, FUN = sum, by = list(Date = Station$date), na.rm = "TRUE")
+
+#Create data frame for export of all variables for Reference ET daily calculation
+Reference.ET <- data.frame(ET0.daily$Date, Rn.MJ.daily$x, G.MJ.daily$x, ET0.daily$x, e.ET0.daily$x)
+colnames(Reference.ET) <- c("Date", "Rn.MJ", "G.MJ", "ET0", "e.ET0")
 
 #Plot energy balance and ET0
-par(mfrow = c(4,1), mar=c(1,4,1,1), oma = c(1,1,1,1))
-plot(Station.daily$date, PPT.daily$x, type = "h", ylab = "")
-mtext("PPT (mm/d)", side = 2, line = 3, cex = 0.5)
-plot(Station.daily$date, Rn.MJ.daily$x, type = "l", ylab = "", xlab = "")
-mtext("Rn (MJ/m2d)", side = 2, line = 3, cex = 0.5)
-plot(Station.daily$date, G.MJ.daily$x, type = "l", ylab = "", xlab = "")
-mtext("G (MJ/m2d)", side = 2, line = 3, cex = 0.5)
-plot(Station.daily$date, ET0.daily$x, type = "l", ylab = "", xlab = "")
-mtext("ET0 (mm/d)", side = 2, line = 3, cex = 0.5)
+par(mfrow = c(4,1), mar=c(2,4,2,1), oma = c(3,2,1,1))
+plot(PPT.daily$Date, PPT.daily$x, type = "h", ylab = "", xaxt="n", xaxs = "i")
+mtext(expression(paste("PPT (mm ", d^{-1}, ")", sep = "")), side = 2, line = 3, cex = 0.75)
+axis.Date(1, at=seq(PPT.daily$Date[1], max(PPT.daily$Date), by="months"), format = "%b-%y", labels = TRUE)
+plot(Rn.MJ.daily$Date, Rn.MJ.daily$x, type = "l", ylab = "", xaxt="n", xaxs = "i")
+mtext(expression(paste("Rn (MJ", " m"^{-2}, "d"^{-1}, ")", sep = "")), side = 2, line = 3, cex = 0.75)
+axis.Date(1, at=seq(Rn.MJ.daily$Date[1], max(Rn.MJ.daily$Date), by="months"), format = "%b-%y", labels = TRUE)
+plot(G.MJ.daily$Date, G.MJ.daily$x, type = "l", ylab = "", xaxt="n", xaxs = "i")
+mtext(expression(paste("G (MJ", " m"^{-2}, "d"^{-1}, ")", sep = "")), side = 2, line = 3, cex = 0.75)
+axis.Date(1, at=seq(G.MJ.daily$Date[1], max(G.MJ.daily$Date), by="months"), format = "%b-%y", labels = TRUE)
+plot(ET0.daily$Date, ET0.daily$x, type = "l", ylab = "", xaxt="n", xaxs = "i")
+mtext(expression(paste("ET"[0], " (mm d"^{-1}, ")", sep ="")), side = 2, line = 3, cex = 0.75)
+axis.Date(1, at=seq(ET0.daily$Date[1], max(ET0.daily$Date), by="months"), format = "%b-%y", labels = TRUE)
+title(main = paste(Location, "from", start, "to", end, sep = " "), line = -1, outer = "TRUE")
 par(mfrow = c(1,1))
 
-##Export graph of time series of Rn, Vap.deficit, ETO
-dev.print(pdf, file=output.path, width=6, height=6, pointsize=2)
+#Export graph of time series of Rn, Vap.deficit, ETO
+dev.print(pdf, file=output.path.graph, width=5, height=6, pointsize=9)
+
+#Export table
+write.table(Reference.ET, file=output.path.table, sep = ",", na = "", dec = ".", row.names = FALSE, col.names = TRUE )
 
 #-------------------------------------------------------------------------------
-# Calculation of the crop albedo (alpha.crop) using Rn from grass surface and measurements
+##Calculation of the crop albedo (alpha.crop) using Rn from grass surface and measurements
 
-# Conversion of Net radiation (Rn) from W/m2 into MJ/m2-30min with 5% error in Rn (assumed)
+##Conversion of Net radiation (Rn) from W/m2 into MJ/m2-30min with 5% error in Rn (assumed)
 
-## Correction implemented for wind speed on the NRLite 2
-Station$Rn.corr <- Station$Rn*(1+0.01*Ws^(3/4))
+# Correction implemented for wind speed on the NRLite 2
+Station$Rn.corr <- Station$Rn*(1+0.01*Station$Ws^(3/4))
 
 #error in Rn.corr
-df10   <- (1+0.01*Ws^(3/4))
-e.df10 <- (3/4)*0.01*(e.Ws/Ws)
-Station$e.Rn.corr <- Station$Rn.corr*sqrt( ((0.05*Rn)/Rn)^2 + (e.df10/df10)^2 )
+df19   <- (1+0.01*Station$Ws^(3/4))
+e.df19 <- (3/4)*0.01*(e.Ws/Station$Ws)
+Station$e.Rn.corr <- Station$Rn.corr*sqrt( ((0.05*Station$Rn)/Station$Rn)^2 + (e.df10/df10)^2 )
 
 #Rn.corr conversion to MJ/m2 30min
 Station$Rn.MJ.crop   <- Station$Rn.corr*3600*0.5*10^-6     #(W/m2)*(J/Ws)*(3600s/hr)*0.5(hr/30min) 
 Station$e.Rn.MJ.crop <- Station$e.Rn.corr*3600*0.5*10^-6
 
-Rn.MJ.daily.crop   <- aggregate(Station$Rn.MJ.crop, list(day = date), sum)
-Rs.MJ.daily        <- aggregate(Station$Rs.MJ, list(day = date), sum)
+Rn.MJ.daily.crop   <- aggregate(Station$Rn.MJ.crop, FUN = sum, list(Date = Station$date))
+Rs.MJ.daily        <- aggregate(Station$Rs.MJ, FUN = sum, list(Date = Station$date))
 
 alpha.crop <- ((Rn.MJ.daily$x - Rn.MJ.daily.crop$x)/Rs.MJ.daily$x) - alpha.ref
 alpha.crop <- ((Station$Rn.MJ.grass - Station$Rn.MJ.crop)/Station$Rs.MJ) - alpha.ref
