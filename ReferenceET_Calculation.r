@@ -5,9 +5,10 @@ library(Hmisc)
 #-------------------------------------------------------------------------------
 ## Input/output file paths
 
-input.path  <- "C:/Users/Mike/Dropbox/PhD/Research/Part I/DataAnalysis/Soyflux_CR1000.csv"
-output.path.graph <- "C:/users/Mike/Desktop/Reference_ET.pdf"
-output.path.table <- "C:/users/Mike/Desktop/Reference_ET.txt"
+input.path         <- "C:/Users/Mike/Dropbox/PhD/Research/Part I/DataAnalysis/Soyflux_CR1000.csv"
+output.path.graph  <- "C:/users/Mike/Desktop/Reference_ET.pdf"
+output.path.table  <- "C:/users/Mike/Desktop/Reference_ET.txt"
+output.path.table2 <- "C:/users/Mike/Desktop/Station_data.txt" 
 
 #-------------------------------------------------------------------------------
 ## Input file location of .csv file for the climate station considered
@@ -25,6 +26,8 @@ long     <- 50.0882                    #longitude in decimal degrees
 Lz       <- 60                         #Longitude of center of time zone
 timestep <- 0.5                        #0.5 for 30 min time step, or 1 for hourly
 Wheight  <- 3.40                       #height of the sensor measuring wind speed, in m
+a.s      <- 0.41                       #calibration factor to relate clear sky shortwave radiation (Rso)
+                                          # to extraterrestrial radiation (Ra) - site specific
 
 #input albedo assumptions or measurements
 alpha.ref  <- 0.23
@@ -175,10 +178,12 @@ Station$Rns.MJ <- (1 - alpha.ref)*Station$Rs.MJ            # net shortwave radia
 Station$e.Rns.MJ <- (1 - alpha.ref)*Station$e.Rs.MJ        # error in Rns.MJ (MJ/m2-30min)
 
 #Calculation of clear sky net shortwave radiation (Rso), equation (37)
-Station$Rso.MJ <- (0.75 + z*2*10^-5)*Station$Ra.MJ         # clear sky net shortwave radiation (MJ/m2-30min)
+#Station$Rso.MJ <- (0.75 + z*2*10^-5)*Station$Ra.MJ         # clear sky net shortwave radiation (MJ/m2-30min)
+Station$Rso.MJ <- a.s*Station$Ra.MJ                       # using Rso=0.42Ra based on measurements
 
 #Calculation of net longwave radiation (Rnl), equation (39)
-Rs.Rso <- ifelse(Station$Rso.MJ == 0, 0.5, Station$Rs.MJ/Station$Rso.MJ)   
+Rs.Rso <- ifelse(Station$Rso.MJ == 0, 0.5, Station$Rs.MJ/Station$Rso.MJ)
+Rs.Rso <- ifelse(Rs.Rso >1, 1, Rs.Rso)                     #used to constrain Rs with values of Rso on sunny days 
 #an improvement can be made on the above line to select the last Rs/Rso before sunset for nighttime Rnl
 #as of now the value is assumed to be 0.5 as per FAO56
 
@@ -243,14 +248,16 @@ detach(Station)
 ## Take daily averages of the time series
 
 PPT.daily     <- aggregate(Station$Precip, FUN = sum, by = list(Date = Station$date), na.rm = "TRUE")
+Ra.MJ.daily   <- aggregate(Station$Ra.MJ,  FUN = sum, by = list(Date = Station$date), na.rm = "TRUE")
+Rs.MJ.daily   <- aggregate(Station$Rs.MJ,  FUN = sum, by = list(Date = Station$date), na.rm = "TRUE")
 Rn.MJ.daily   <- aggregate(Station$Rn.MJ.grass, FUN = sum, by =  list(Date = Station$date), na.rm = "TRUE")
 G.MJ.daily    <- aggregate(Station$G.MJ, FUN = sum, by = list(Date = Station$date), na.rm = "TRUE")
 ET0.daily     <- aggregate(Station$ET0, FUN = sum, by = list(Date = Station$date), na.rm = "TRUE") 
 e.ET0.daily   <- aggregate(Station$e.ET0, FUN = sum, by = list(Date = Station$date), na.rm = "TRUE")
 
 #Create data frame for export of all variables for Reference ET daily calculation
-Reference.ET <- data.frame(ET0.daily$Date, Rn.MJ.daily$x, G.MJ.daily$x, ET0.daily$x, e.ET0.daily$x)
-colnames(Reference.ET) <- c("Date", "Rn.MJ", "G.MJ", "ET0", "e.ET0")
+Reference.ET <- data.frame(ET0.daily$Date, Ra.MJ.daily$x, Rs.MJ.daily$x, Rn.MJ.daily$x, G.MJ.daily$x, ET0.daily$x, e.ET0.daily$x)
+colnames(Reference.ET) <- c("Date", "Ra.MJ", "Rs.MJ", "Rn.MJ", "G.MJ", "ET0", "e.ET0")
 
 #Plot energy balance and ET0
 par(mfrow = c(4,1), mar=c(2,4,2,1), oma = c(3,2,1,1))
@@ -274,6 +281,7 @@ dev.print(pdf, file=output.path.graph, width=5, height=6, pointsize=9)
 
 #Export table
 write.table(Reference.ET, file=output.path.table, sep = ",", na = "", dec = ".", row.names = FALSE, col.names = TRUE )
+write.table(Station, file=output.path.table2, sep = ",", na = "", dec = ".", row.names = FALSE, col.names = TRUE )
 
 #-------------------------------------------------------------------------------
 ##Calculation of the crop albedo (alpha.crop) using Rn from grass surface and measurements
@@ -297,6 +305,7 @@ Rs.MJ.daily        <- aggregate(Station$Rs.MJ, FUN = sum, list(Date = Station$da
 
 alpha.crop <- ((Rn.MJ.daily$x - Rn.MJ.daily.crop$x)/Rs.MJ.daily$x) - alpha.ref
 alpha.crop <- ((Station$Rn.MJ.grass - Station$Rn.MJ.crop)/Station$Rs.MJ) - alpha.ref
+alpha.crop <- ifelse(alpha.crop <0, NA, alpha.crop)
 
 # this part on alpha needs some more thought
 
