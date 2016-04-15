@@ -284,7 +284,8 @@ write.table(Reference.ET, file=output.path.table, sep = ",", na = "", dec = ".",
 write.table(Station, file=output.path.table2, sep = ",", na = "", dec = ".", row.names = FALSE, col.names = TRUE )
 
 #-------------------------------------------------------------------------------
-##Calculation of the crop albedo (alpha.crop) using Rn from grass surface and measurements
+## Calculation of the crop albedo (alpha.crop) using Rn for grass surface and Rn measurements
+## above the crop canopy
 
 ##Conversion of Net radiation (Rn) from W/m2 into MJ/m2-30min with 5% error in Rn (assumed)
 
@@ -303,11 +304,12 @@ Station$e.Rn.MJ.crop <- Station$e.Rn.corr*3600*0.5*10^-6
 Rn.MJ.daily.crop   <- aggregate(Station$Rn.MJ.crop, FUN = sum, list(Date = Station$date))
 Rs.MJ.daily        <- aggregate(Station$Rs.MJ, FUN = sum, list(Date = Station$date))
 
-alpha.crop <- ((Rn.MJ.daily$x - Rn.MJ.daily.crop$x)/Rs.MJ.daily$x) - alpha.ref
-alpha.crop <- ((Station$Rn.MJ.grass - Station$Rn.MJ.crop)/Station$Rs.MJ) - alpha.ref
-alpha.crop <- ifelse(alpha.crop <0, NA, alpha.crop)
+attach(Station)
+alpha.crop <- 1- ((Rns.MJ - Rn.MJ.grass + Rn.MJ.crop)/Rs.MJ)
+albedo.crop <- data.frame(Station$date, Station$timestamp, ifelse(alpha.crop <0|alpha.crop>1, NA, alpha.crop))   #albedo between 0 and 1
+colnames(albedo.crop) <- c("date", "timestamp", "albedo")
 
-# this part on alpha needs some more thought
+# Calculate the error in albedo calculation
 
 #-------------------------------------------------------------------------------
 #### END #######################################################################
