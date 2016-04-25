@@ -122,8 +122,13 @@ attach(Station)
 
 Reference.ET <- data.frame(Date, RHmean, Tmax, Tmin, Tmean, eoTmin, eoTmax, ea, VPD, Precip, ET0)
 
+
 # Calculate decadal average following FAO56
 Reference.ET$date <- as.Date(Reference.ET$Date, "%Y-%m-%d")
+
+# use date selection
+Reference.ET  <- selectByDate(Reference.ET, start = start.date, end = end.date)
+
 Reference.ET.10day <- timeAverage(Reference.ET, avg.time = "10 day", statistic = "mean")
 test <- vector()
 for (i in (1:length(Reference.ET.10day$ET0))) {
@@ -133,8 +138,6 @@ for (i in (1:length(Reference.ET.10day$ET0))) {
 
 # Combine decadal average data to the Reference.ET data frame
 Reference.ET$ET0.10 <- test[1:length(Reference.ET$ET0)]
-
-Reference.ET  <- selectByDate(Reference.ET, start = start.date, end = end.date)
 
 detach(Station)
 
