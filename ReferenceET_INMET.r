@@ -21,13 +21,16 @@ Location <- "Canarana Station"
 z       <- 430                  #altitude in m
 lat     <- -13.47               #latitude in decimal degrees
 Wheight <- 10                   #height of the sensor measuring wind speed, in m
-
+start.date <- as.Date("2000/01/01", format = "%Y/%m/%d")
+end.date   <- as.Date("2013/12/31", format = "%Y/%m/%d")
+  
 #-------------------------------------------------------------------------------
 # Date conversion
 
 attach(Station)
 Date <- as.Date(Station$Date, "%m/%d/%Y")
-J    <- as.numeric(strftime(Date, format = "%j"))     #conversion to julian day of year
+Station$date <- as.Date(Station$Date, "%m/%d/%Y")
+J    <- as.numeric(strftime(Station$date, format = "%j"))     #conversion to julian day of year
 
 #-------------------------------------------------------------------------------                 
 # List of variables, constants used in the calculation
@@ -115,6 +118,8 @@ ET0 <- signif((0.408*Delta*(Rn-0)+ gamm*(900/(Tmean+273))*u2*VPD)/(Delta + gamm*
                                          ##keep 2 significant figures (from ea)
 
 # Creation of a new data frame with all variables to calculate ET0
+attach(Station)
+
 Reference.ET <- data.frame(Date, RHmean, Tmax, Tmin, Tmean, eoTmin, eoTmax, ea, VPD, Precip, ET0)
 
 # Calculate decadal average following FAO56
@@ -129,6 +134,8 @@ for (i in (1:length(Reference.ET.10day$ET0))) {
 # Combine decadal average data to the Reference.ET data frame
 Reference.ET$ET0.10 <- test[1:length(Reference.ET$ET0)]
 
+Reference.ET  <- selectByDate(Reference.ET, start = start.date, end = end.date)
+
 detach(Station)
 
 #-------------------------------------------------------------------------------
@@ -140,7 +147,7 @@ write.table(Reference.ET, file=output.path.table, sep = ",", na = "", dec = ".",
 
 attach(Reference.ET)
 par(mfrow = c(4,1), mar=c(2,4,2,1), oma = c(3,2,1,1))
-plot(Date, Precip, ylab = "", xlab = "", xaxt="n", xaxs = "i", type="h")
+plot(Reference.ET$Date, Precip, ylab = "", xlab = "", xaxt="n", xaxs = "i", type="h")
 mtext(expression(paste("PPT (mm ", d^{-1}, ")", sep = "")), side = 2, line = 3, cex = 0.75)
 axis.Date(1, at=seq(Date[1], max(Date), by="years"), format = "%Y", labels = TRUE)
 plot(Date, Rn, ylab = "", xlab = "", xaxt="n", xaxs = "i")
