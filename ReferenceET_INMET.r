@@ -6,7 +6,7 @@ rm(list = ls())
 #-------------------------------------------------------------------------------
 ## Input/output file paths
 
-input.path  <- "D:/Thesis MSC/Aquarius/Canarana/INMET_Canarana_1999_2015.csv"
+input.path        <- "D:/Thesis MSC/Aquarius/SaoVincente/INMET_SaoVincente_Aquarius3.csv"
 output.path.graph <- "C:/users/Mike/Desktop/Reference_ET.pdf"
 output.path.table <- "C:/users/Mike/Desktop/Reference_ET.txt"
 
@@ -17,9 +17,9 @@ Station <-  read.table(input.path, header=TRUE, sep=",", na.strings="NA", dec=".
 #-------------------------------------------------------------------------------
 ##Input altitude, latitude and name of the climate station 
 
-Location <- "Canarana Station"
-z       <- 430                  #altitude in m
-lat     <- -13.47               #latitude in decimal degrees
+Location <- "SaoVincente Station"
+z       <- 800                  #altitude in m
+lat     <- -15.82               #latitude in decimal degrees
 Wheight <- 10                   #height of the sensor measuring wind speed, in m
 start.date <- as.Date("2000/01/01", format = "%Y/%m/%d")
 end.date   <- as.Date("2013/12/31", format = "%Y/%m/%d")
@@ -118,9 +118,7 @@ ET0 <- signif((0.408*Delta*(Rn-0)+ gamm*(900/(Tmean+273))*u2*VPD)/(Delta + gamm*
                                          ##keep 2 significant figures (from ea)
 
 # Creation of a new data frame with all variables to calculate ET0
-attach(Station)
-
-Reference.ET <- data.frame(Date, RHmean, Tmax, Tmin, Tmean, eoTmin, eoTmax, ea, VPD, Precip, ET0)
+Reference.ET <- data.frame(Date, RHmean, Tmax, Tmin, Tmean, eoTmin, eoTmax, ea, VPD, Precip, Rn, ET0)
 
 
 # Calculate decadal average following FAO56
@@ -148,23 +146,21 @@ write.table(Reference.ET, file=output.path.table, sep = ",", na = "", dec = ".",
 #-------------------------------------------------------------------------------
 ## Plot data to check for anomalies in the time series, Precipitation, Rn, VPD, ET0
 
-attach(Reference.ET)
 par(mfrow = c(4,1), mar=c(2,4,2,1), oma = c(3,2,1,1))
-plot(Reference.ET$Date, Precip, ylab = "", xlab = "", xaxt="n", xaxs = "i", type="h")
+plot(Reference.ET$Date, Reference.ET$Precip, ylab = "", xlab = "", xaxt="n", xaxs = "i", type="h")
 mtext(expression(paste("PPT (mm ", d^{-1}, ")", sep = "")), side = 2, line = 3, cex = 0.75)
 axis.Date(1, at=seq(Date[1], max(Date), by="years"), format = "%Y", labels = TRUE)
-plot(Date, Rn, ylab = "", xlab = "", xaxt="n", xaxs = "i")
+plot(Reference.ET$Date, Reference.ET$Rn, ylab = "", xlab = "", xaxt="n", xaxs = "i")
 mtext(expression(paste("Rn (MJ", " m"^{-2}, "d"^{-1}, ")", sep = "")), side = 2, line = 3, cex = 0.75)
 axis.Date(1, at=seq(Date[1], max(Date), by="years"), format = "%Y", labels = TRUE)
-plot(Date,VPD, ylab = "", xlab = "", xaxt="n", xaxs = "i", col="blue")
+plot(Reference.ET$Date,Reference.ET$VPD, ylab = "", xlab = "", xaxt="n", xaxs = "i", col="blue")
 mtext("VPD (kPa)", side = 2, line = 3, cex = 0.75)
 axis.Date(1, at=seq(Date[1], max(Date), by="years"), format = "%Y", labels = TRUE)
-plot(Date,ET0, ylab = "", xlab = "", xaxt="n", xaxs = "i", col="red")
+plot(Reference.ET$Date,Reference.ET$ET0, ylab = "", xlab = "", xaxt="n", xaxs = "i", col="red")
 mtext(expression(paste("ET"[0], " (mm d"^{-1}, ")", sep ="")), side = 2, line = 3, cex = 0.75)
 axis.Date(1, at=seq(Date[1], max(Date), by="years"), format = "%Y", labels = TRUE)
 title(Location, cex = 1.5, outer = TRUE)
 par(mfrow=c(1,1))
-detach(Reference.ET)
 
 ##Export graph 
 dev.print(pdf, file=output.path.graph, width=7.5, height=10, pointsize=5)
