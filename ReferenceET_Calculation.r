@@ -6,7 +6,7 @@ library(Hmisc)
 ## Input/output file paths
 
 input.path         <- "C:/Users/Mike/Dropbox/PhD/Research/Part I/DataAnalysis/Soyflux_CR1000.csv"
-output.path.graph  <- "C:/users/Mike/Desktop/Reference_ET.pdf"
+output.path.graph  <- "C:/users/Mike/Desktop/Reference_ET.tif"
 output.path.table  <- "C:/users/Mike/Desktop/Reference_ET.txt"
 output.path.table2 <- "C:/users/Mike/Desktop/Station_data.txt" 
 
@@ -33,8 +33,8 @@ a.s      <- 0.41                       #calibration factor to relate clear sky s
 alpha.ref  <- 0.23
 
 #input days of interest for planting season
-start <- "2015-10-02"
-end   <- "2016-02-01"
+start <- "2015-09-17"
+end   <- "2016-09-17"
 
 #-------------------------------------------------------------------------------
 ## Date conversion
@@ -277,7 +277,7 @@ title(main = paste(Location, "from", start, "to", end, sep = " "), line = -1, ou
 par(mfrow = c(1,1))
 
 #Export graph of time series of Rn, Vap.deficit, ETO
-dev.print(pdf, file=output.path.graph, width=5, height=6, pointsize=9)
+dev.print(tiff, file=output.path.graph, width=1500, height=1500, res=150)
 
 #Export table
 write.table(Reference.ET, file=output.path.table, sep = ",", na = "", dec = ".", row.names = FALSE, col.names = TRUE )
