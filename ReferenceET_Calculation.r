@@ -1,14 +1,13 @@
 rm(list = ls())
 library(openair)
-library(Hmisc)
 
 #-------------------------------------------------------------------------------
 ## Input/output file paths
 
-input.path         <- "C:/Users/Mike/Dropbox/PhD/Research/Part I/DataAnalysis/Soyflux_CR1000.csv"
-output.path.graph  <- "C:/users/Mike/Desktop/Reference_ET.tif"
-output.path.table  <- "C:/users/Mike/Desktop/Reference_ET.txt"
-output.path.table2 <- "C:/users/Mike/Desktop/Station_data.txt" 
+input.path         <- "C:/Users/Mike Lathuilliere/Dropbox/PhD/Research/Part I/DataAnalysis/Soyflux_CR1000.csv"
+output.path.graph  <- "C:/users/Mike Lathuilliere/Desktop/Reference_ET.tif"
+output.path.table  <- "C:/users/Mike Lathuilliere/Desktop/Reference_ET.txt"
+output.path.table2 <- "C:/users/Mike Lathuilliere/Desktop/Station_data.txt" 
 
 #-------------------------------------------------------------------------------
 ## Input file location of .csv file for the climate station considered
@@ -256,8 +255,8 @@ ET0.daily     <- aggregate(Station$ET0, FUN = sum, by = list(Date = Station$date
 e.ET0.daily   <- aggregate(Station$e.ET0, FUN = sum, by = list(Date = Station$date), na.rm = "TRUE")
 
 #Create data frame for export of all variables for Reference ET daily calculation
-Reference.ET <- data.frame(ET0.daily$Date, Ra.MJ.daily$x, Rs.MJ.daily$x, Rn.MJ.daily$x, G.MJ.daily$x, ET0.daily$x, e.ET0.daily$x)
-colnames(Reference.ET) <- c("Date", "Ra.MJ", "Rs.MJ", "Rn.MJ", "G.MJ", "ET0", "e.ET0")
+Reference.ET <- data.frame(ET0.daily$Date, Ra.MJ.daily$x, Rs.MJ.daily$x, Rn.MJ.daily$x, G.MJ.daily$x, ET0.daily$x, e.ET0.daily$x, PPT.daily$x)
+colnames(Reference.ET) <- c("Date", "Ra.MJ", "Rs.MJ", "Rn.MJ", "G.MJ", "ET0", "e.ET0", "Precip")
 
 #Plot energy balance and ET0
 par(mfrow = c(4,1), mar=c(2,4,2,1), oma = c(3,2,1,1))
