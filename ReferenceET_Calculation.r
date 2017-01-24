@@ -4,16 +4,20 @@ library(openair)
 #-------------------------------------------------------------------------------
 ## Input/output file paths
 
-input.path         <- "C:/Users/Mike Lathuilliere/Dropbox/PhD/Research/Part I/DataAnalysis/Soyflux_CR1000.csv"
-output.path.graph  <- "C:/users/Mike Lathuilliere/Desktop/Reference_ET.tif"
-output.path.table  <- "C:/users/Mike Lathuilliere/Desktop/Reference_ET.txt"
-output.path.table2 <- "C:/users/Mike Lathuilliere/Desktop/Station_data.txt" 
+input.path         <- "C:/Users/Mike/Dropbox/PhD/Research/Part I/DataAnalysis/Soyflux_CR1000.csv"
+input.path2        <- "C:/Users/Mike/Dropbox/PhD/Research/Part I//DataAnalysis/EC_Data/Complete_Datasets/Rainfed1.csv"
+output.path.graph  <- "C:/users/Mike/Desktop/Reference_ET.tif"
+output.path.table  <- "C:/users/Mike/Desktop/Reference_ET.txt"
+output.path.table2 <- "C:/users/Mike/Desktop/Station_data.txt" 
 
 #-------------------------------------------------------------------------------
 ## Input file location of .csv file for the climate station considered
 
 Station <-
   read.table(input.path, header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE)
+
+Station2 <- 
+  read.table(input.path2, header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE)
 
 #-------------------------------------------------------------------------------
 ## Input altitude, latitude and name of the climate station 
@@ -26,33 +30,39 @@ Lz       <- 60                         #Longitude of center of time zone
 timestep <- 0.5                        #0.5 for 30 min time step, or 1 for hourly
 Wheight  <- 3.40                       #height of the sensor measuring wind speed, in m
 a.s      <- 0.41                       #calibration factor to relate clear sky shortwave radiation (Rso)
-                                          # to extraterrestrial radiation (Ra) - site specific
+# to extraterrestrial radiation (Ra) - site specific
 
 #input albedo assumptions or measurements
 alpha.ref  <- 0.23
 
 #input days of interest for planting season
-start <- "2015-09-17"
-end   <- "2016-09-17"
+start <- "2015-09-18"
+end   <- "2016-09-16"
 
 #-------------------------------------------------------------------------------
 ## Date conversion
 
-Station$timestamp     <- as.POSIXct(Station$timestamp, "%m/%d/%Y %H:%M", tz="GMT")        
-Station$timestamp.AMT <- as.POSIXct(Station$timestamp, "%m/%d/%Y %H:%M", tz="GMT")
+Station$timestamp     <- as.POSIXct(Station$timestamp, "%m-%d-%Y %H:%M", tz="GMT")        
+Station$timestamp.AMT <- as.POSIXct(Station$timestamp, "%m-%d-%Y %H:%M", tz="GMT")
 attributes(Station$timestamp.AMT)$tzone <- "America/Cuiaba"
 Station$date <- as.Date(Station$timestamp, "%Y-%m-%d %H:%M:%S", tz="GMT")
 
+Station2$timestamp     <- as.POSIXct(Station2$timestamp, "%d-%m-%y %H:%M", tz="GMT")
+Station2$timestamp.AMT <- as.POSIXct(Station2$timestamp, "%d-%m-%Y %H:%M", tz="GMT")
+attributes(Station2$timestamp.AMT)$tzone <- "America/Cuiaba"
+Station2$date <- as.Date(Station2$timestamp, "%Y-%m-%d %H:%M:%S", tz="GMT")
+
 # Convert times to decimals and AMT timezone
 Station$time <- sapply(strsplit(format.Date(Station$timestamp.AMT, "%H:%M", tz="AMT"),":"),
-  function(x){
-    x <- as.numeric(x)
-    (x[1]+x[2]/60)
-  }
+                       function(x){
+                         x <- as.numeric(x)
+                         (x[1]+x[2]/60)
+                       }
 )
 
 # Select the time series of interest                    
-Station <- selectByDate(Station, start = start, end = end)
+Station  <- selectByDate(Station, start = start, end = end)
+Station2 <- selectByDate(Station2, start = start, end = end)
 
 #-------------------------------------------------------------------------------
 ## Propagation of error based on measurements
@@ -203,14 +213,8 @@ Station$e.Rn.MJ.grass <- ifelse(Station$Rso.MJ == 0, Station$e.Rns.MJ, Station$e
 ## Ground heat flux measurements
 
 #Create data frame for all G sensor measurements
-G <- data.frame()
-for (i in 1:length(Station$timestamp)) {
-  g <- c(Station$Hukse_shf_Avg[i], Station$TEM1[i], Station$TEM2[i], Station$TEM3[i], Station$TEM4[i]) 
-  g.mean <- mean(g, na.rm = TRUE)*3600*0.5*10^-6    #convert to MJ/m2 30min
-  G <- rbind(G, g.mean) 
-}
-colnames(G) <-("G.MJ")
-Station$G.MJ <- G$G.MJ
+Station$G <- Station2$G.corr
+Station$G.MJ <- Station$G*3600*0.5*10^-6    #convert to MJ/m2 30min
 
 #error in G.MJ
 Station$e.G.MJ <- 0.10*Station$G.MJ
