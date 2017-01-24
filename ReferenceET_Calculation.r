@@ -222,8 +222,10 @@ Station$e.G.MJ <- 0.10*Station$G.MJ
 #-------------------------------------------------------------------------------
 #Calculation of reference ET (ET0), in mm/30min, equation (6)
 
-Station$ET0 <- (0.408*Station$Delta*(Station$Rn.MJ.grass-Station$G.MJ) + 
-                  Station$gamm*(37/(Tair+273))*Station$u2*Station$VPD)/(Station$Delta + Station$gamm*(1+0.34*Station$u2))
+Station$ET0 <- ifelse(is.na(Station$G.MJ) == TRUE, 
+                      (0.408*Station$Delta*(Station$Rn.MJ.grass) + 
+                         Station$gamm*(37/(Tair+273))*Station$u2*Station$VPD)/(Station$Delta + Station$gamm*(1+0.34*Station$u2)),(0.408*Station$Delta*(Station$Rn.MJ.grass-Station$G.MJ) + 
+                  Station$gamm*(37/(Tair+273))*Station$u2*Station$VPD)/(Station$Delta + Station$gamm*(1+0.34*Station$u2)))
 
 Station$ET0 <- signif(Station$ET0, digits = 3)        ##keep 2 significant figures (from ea)
 
