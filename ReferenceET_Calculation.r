@@ -5,10 +5,11 @@ library(openair)
 ## Input/output file paths
 
 input.path         <- "C:/Users/Mike/Dropbox/PhD/Research/Part I/DataAnalysis/Soyflux_CR1000.csv"
-input.path2        <- "C:/Users/Mike/Dropbox/PhD/Research/Part I//DataAnalysis/EC_Data/Complete_Datasets/Rainfed1.csv"
+input.path2        <- "C:/Users/Mike/Dropbox/PhD/Research/Part I/DataAnalysis/EC_Data/Complete_Datasets/Rainfed1.csv"
 output.path.graph  <- "C:/users/Mike/Desktop/Reference_ET.tif"
 output.path.table  <- "C:/users/Mike/Desktop/Reference_ET.txt"
-output.path.table2 <- "C:/users/Mike/Desktop/Station_data.txt" 
+output.path.table2 <- "C:/users/Mike/Desktop/Reference_ET_daily.txt"
+output.path.table3 <- "C:/users/Mike/Desktop/Station_data.txt" 
 
 #-------------------------------------------------------------------------------
 ## Input file location of .csv file for the climate station considered
@@ -16,7 +17,7 @@ output.path.table2 <- "C:/users/Mike/Desktop/Station_data.txt"
 Station <-
   read.table(input.path, header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE)
 
-Station2 <- 
+Rainfed <- 
   read.table(input.path2, header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE)
 
 #-------------------------------------------------------------------------------
@@ -37,7 +38,7 @@ alpha.ref  <- 0.23
 
 #input days of interest for planting season
 start <- "2015-09-18"
-end   <- "2016-09-16"
+end   <- "2017-02-04"
 
 #-------------------------------------------------------------------------------
 ## Date conversion
@@ -47,10 +48,10 @@ Station$timestamp.AMT <- as.POSIXct(Station$timestamp, "%m-%d-%Y %H:%M", tz="GMT
 attributes(Station$timestamp.AMT)$tzone <- "America/Cuiaba"
 Station$date <- as.Date(Station$timestamp, "%Y-%m-%d %H:%M:%S", tz="GMT")
 
-Station2$timestamp     <- as.POSIXct(Station2$timestamp, "%d-%m-%y %H:%M", tz="GMT")
-Station2$timestamp.AMT <- as.POSIXct(Station2$timestamp, "%d-%m-%Y %H:%M", tz="GMT")
-attributes(Station2$timestamp.AMT)$tzone <- "America/Cuiaba"
-Station2$date <- as.Date(Station2$timestamp, "%Y-%m-%d %H:%M:%S", tz="GMT")
+Rainfed$timestamp     <- as.POSIXct(Rainfed$timestamp, "%d-%m-%y %H:%M", tz="GMT")
+Rainfed$timestamp.AMT <- as.POSIXct(Rainfed$timestamp, "%d-%m-%Y %H:%M", tz="GMT")
+attributes(Rainfed$timestamp.AMT)$tzone <- "America/Cuiaba"
+Rainfed$date <- as.Date(Rainfed$timestamp, "%Y-%m-%d %H:%M:%S", tz="GMT")
 
 # Convert times to decimals and AMT timezone
 Station$time <- sapply(strsplit(format.Date(Station$timestamp.AMT, "%H:%M", tz="AMT"),":"),
@@ -61,8 +62,8 @@ Station$time <- sapply(strsplit(format.Date(Station$timestamp.AMT, "%H:%M", tz="
 )
 
 # Select the time series of interest                    
-Station  <- selectByDate(Station, start = start, end = end)
-Station2 <- selectByDate(Station2, start = start, end = end)
+Station   <- selectByDate(Station, start = start, end = end)
+Rainfed   <- selectByDate(Rainfed, start = start, end = end)
 
 #-------------------------------------------------------------------------------
 ## Propagation of error based on measurements
@@ -79,12 +80,12 @@ e.Wheight <- 0.5                                      #error in positioning of V
 
 attach(Station)
 
-uz <- Ws                                              #rename mean wind speed in m/s  
-Station$lambda <- 2.501 - (2.361*0.001)*Tair          #Temperature dependent latent heat of vapourization (MJ/kg)
-Station$e.lambda <- 0.3*(2.361*0.001)                 #error in the latent heat of vapourization (MJ/kg)
-Cp <- 1.013*10^-3                                     #Specific heat capacity at constant P (MJ/kg.degC)
-sigma <- 4.903*10^-9                                  #Boltzmann constant in MJ/K^4m^2day
-Station$u2 <- uz*(4.87/(log(67.8*Wheight-5.42)))      #Wind speed at 2m height calculated from uz, equation (47) 
+uz               <- Ws                                                                  #rename mean wind speed (m/s)  
+Station$lambda   <- 2.501 - (2.361*0.001)*Tair                                          #Temperature dependent latent heat of vapourization (MJ/kg)
+Station$e.lambda <- 0.3*(2.361*0.001)                                                   #error in the latent heat of vapourization (MJ/kg)
+Cp               <- ifelse(is.na(Rainfed$Cp) == TRUE, 1.013*10^-3, Rainfed$Cp*10^-6)    #Specific heat capacity at constant P eddy covariance and literature (MJ/kg.degC)
+sigma            <- 4.903*10^-9                                                         #Boltzmann constant, in (MJ/K4m2day)
+Station$u2       <- uz*(4.87/(log(67.8*Wheight-5.42)))                                  #Wind speed at 2m height calculated from uz, equation (47) 
 
 # error in u2, wind speed at 2 m height
 df1   <- 67.8*Wheight
@@ -112,10 +113,10 @@ Station$e.gamm <- Station$gamm*sqrt( (e.df4/df4)^2 + (e.df5/df5)^2 )
 #-------------------------------------------------------------------------------
 ## Calculation of the vapour pressure deficit (es - ea) (kPa)
 
-#Saturation vapour pressure 'es' (kPa), equation (11)
-Station$es <- signif(0.6108*exp(17.27*Tair/(Tair+237.3)), digits = 3)     # keep 3 sig. figs
+#Saturation vapour pressure 'es' (kPa) in both fields, measured and using equation (11)
+Station$es   <- ifelse(is.na(Tair) == TRUE, NA, signif(0.6108*exp(17.27*Tair/(Tair+237.3)), digits = 3))
 
-#error in es
+#error in es assuming same error between meteorological and EC install
 df6   <- 17.27*Tair
 e.df6 <- df6*(e.Tair/Tair)
 df7   <- df6/(Tair + 237.3)
@@ -126,10 +127,10 @@ Station$e.es <- Station$es*(e.df7)
 Station$ea   <- signif(RH*Station$es*0.01, digits = 3)                    # keep 3 sig. figs
 
 # error in ea
-Station$e.ea <- Station$ea*sqrt( (Station$e.es/Station$es)^2 + (e.RH/RH)^2 )
+Station$e.ea   <- Station$ea*sqrt( (Station$e.es/Station$es)^2 + (e.RH/RH)^2 )
 
 #Vapour pressure deficit (kPa)
-Station$VPD   <- signif(Station$es - Station$ea, digits = 3)              # keep 3 sig. figs
+Station$VPD    <- signif(Station$es - Station$ea, digits = 3)             # keep 3 sig. figs
 
 #error in VPD
 Station$e.VPD <- sqrt( (Station$e.es)^2 + (Station$e.ea)^2 ) 
@@ -149,7 +150,7 @@ Station$e.Delta <- 4098*(Station$Delta*e.df9)
 ## Calculation of the extraterrestrial radiation (Ra) equation (28)
 
 ##Input longitude (fi) and latitude (lat)
-fi <- signif((pi/180)*(lat), digits = 4)         ##in rad, equation (22), keep 4 significant figures
+fi <- signif((pi/180)*lat, digits = 4)         ##in rad, equation (22), keep 4 significant figures
 Gsc <- 0.0820                                    ##Solar constant in MJ/m2m-1
 fi.2 <- (279.575 + 0.986*jday)*pi/180
 
@@ -165,15 +166,16 @@ Sc     <- 0.1645*sin(2*b.coef) - 0.1255*cos(b.coef) - 0.025*sin(b.coef)    # in 
 
 #Solar time angle at midpoint of the period, equation (31) 
 w  <- (pi/12)*(( (Station$time - 0.25) + 0.06667*(Lz - long) + Sc) - 12)    # in rad
+             
 w1 <- w - (pi*timestep/24)                                                  # in rad (from equation (29))
 w2 <- w + (pi*timestep/24)                                                  # in rad (from equation (30))
 
 #Calculation of extraterrestial radiation, in MJ/m2-30min, equation (28)
-Station$Ra.MJ <- signif((24*60/pi)*Gsc*dr*((w2 - w1)*sin(fi)*sin(delta)+cos(fi)*cos(delta)*(sin(w2) - sin(w1))), digits = 4)
+Station$Ra.MJ <- signif((12*60/pi)*Gsc*dr*((w2 - w1)*sin(fi)*sin(delta)+cos(fi)*cos(delta)*(sin(w2) - sin(w1))), digits = 4)
 Station$Ra.MJ <- ifelse(Station$Ra.MJ <0, 0, Station$Ra.MJ)     # if the solar angle is negative (nighttime) then Ra = 0
 
-#Convert Ra into W/m2.s
-Station$Ra.W <- Station$Ra.MJ*10^6/(3600*24)
+#Convert Ra into W/m2 at every 30-min time interval
+Station$Ra.W <- Station$Ra.MJ*10^6/(3600*0.5)
 
 #-------------------------------------------------------------------------------
 ## Determination of theoretical Rn for reference grass crop 
@@ -183,12 +185,12 @@ Station$Rs.MJ   <- Station$Rs*3600*0.5*10^-6
 Station$e.Rs.MJ <- e.Rs*3600*0.5*10^-6 
 
 #Calculation of net shortwave radiation (Rns), equation (38)
-Station$Rns.MJ <- (1 - alpha.ref)*Station$Rs.MJ            # net shortwave radiation (MJ/m2-30min)
-Station$e.Rns.MJ <- (1 - alpha.ref)*Station$e.Rs.MJ        # error in Rns.MJ (MJ/m2-30min)
+Station$Rns.MJ   <- (1 - alpha.ref)*Station$Rs.MJ            # net shortwave radiation (MJ/m2-30min)
+Station$e.Rns.MJ <- (1 - alpha.ref)*Station$e.Rs.MJ          # error in Rns.MJ (MJ/m2-30min)
 
 #Calculation of clear sky net shortwave radiation (Rso), equation (37)
 #Station$Rso.MJ <- (0.75 + z*2*10^-5)*Station$Ra.MJ         # clear sky net shortwave radiation (MJ/m2-30min)
-Station$Rso.MJ <- a.s*Station$Ra.MJ                       # using Rso=0.42Ra based on measurements
+Station$Rso.MJ <- a.s*Station$Ra.MJ                         # using Rso=0.42Ra based on measurements
 
 #Calculation of net longwave radiation (Rnl), equation (39)
 Rs.Rso <- ifelse(Station$Rso.MJ == 0, 0.5, Station$Rs.MJ/Station$Rso.MJ)
@@ -206,27 +208,18 @@ e.df11 <- df11*0.5*(Station$e.ea/Station$ea)
 Station$e.Rnl.MJ <- (0.1021*10^-9)*e.df10*0.14*e.df11*(1.35/Station$Rso.MJ)*Station$e.Rs.MJ
 
 # Calculation of theoretical Rn (over grass) considering above equations
-Station$Rn.MJ.grass <- Station$Rns.MJ - Station$Rnl.MJ     # in MJ/m2-30min
+Station$Rn.MJ.grass   <- Station$Rns.MJ - Station$Rnl.MJ     # in MJ/m2-30min
 Station$e.Rn.MJ.grass <- ifelse(Station$Rso.MJ == 0, Station$e.Rns.MJ, Station$e.Rns.MJ + Station$e.Rnl.MJ)    #error in Rn.MJ.grass
 
 #-------------------------------------------------------------------------------
-## Ground heat flux measurements
+#Calculation of reference ET (ET0), in mm/day, equation (6)
 
-#Create data frame for all G sensor measurements
-Station$G <- Station2$G.corr
-Station$G.MJ <- Station$G*3600*0.5*10^-6    #convert to MJ/m2 30min
+# Calculate ET0 for every 30-min assuming G = 0.1Rn during the day and G = 0.5 Rn at night
+# following equations (45) and (46)
+Station$G.MJ.grass <- ifelse(Station$Rs > 1, 0.1*Station$Rn.MJ.grass, 0.5*Station$Rn.MJ.grass)
 
-#error in G.MJ
-Station$e.G.MJ <- 0.10*Station$G.MJ
-
-#-------------------------------------------------------------------------------
-#Calculation of reference ET (ET0), in mm/30min, equation (6)
-
-Station$ET0 <- ifelse(is.na(Station$G.MJ) == TRUE, 
-                      (0.408*Station$Delta*(Station$Rn.MJ.grass) + 
-                         Station$gamm*(37/(Tair+273))*Station$u2*Station$VPD)/(Station$Delta + Station$gamm*(1+0.34*Station$u2)),(0.408*Station$Delta*(Station$Rn.MJ.grass-Station$G.MJ) + 
-                  Station$gamm*(37/(Tair+273))*Station$u2*Station$VPD)/(Station$Delta + Station$gamm*(1+0.34*Station$u2)))
-
+Station$ET0 <- 0.408*Delta*(Rn.MJ.grass-G.MJ.grass) + 
+                           gamm*(37/(Tair+273))*u2*VPD/(Delta + gamm*(1+0.34*u2))
 Station$ET0 <- signif(Station$ET0, digits = 3)        ##keep 2 significant figures (from ea)
 
 #error in ET0 with 10% error in G values
@@ -247,74 +240,61 @@ e.df18 <- df18*sqrt( (Station$e.gamm/Station$gamm)^2 + (e.df17/df17)^2 )
 
 Station$e.ET0 <- abs(Station$ET0)*sqrt( (e.df18/df18)^2 + (e.df15/df15)^2 )
 
+## Obtain daily average of input values to compute ET0 per day 
+Station.daily     <- timeAverage(Station, avg.time = "day", statistic = "mean", na.rm = TRUE)
+
+# Provide daily sum of precipitation and energy variables
+PPT.daily             <- Station.daily$Precip*(24/timestep)        # in mm/d
+Ra.MJ.daily           <- Station.daily$Ra.MJ*(24/timestep)         # in MJ/m2d
+Ra.W.daily            <- Station.daily$Ra.W*(24/timestep)          # in W/m2
+Rs.MJ.daily           <- Station.daily$Rs.MJ*(24/timestep)         # in MJ/m2d
+Rs.daily              <- Station.daily$Rs*(24/timestep)            # in W/m2
+Rn.MJ.grass.daily     <- Station.daily$Rn.MJ.grass*(24/timestep)   # in MJ/m2d
+G.MJ.grass.daily      <- Station.daily$G.MJ.grass*(24/timestep)    # in MJ/m2d
+e.Rs.MJ.daily         <- Station.daily$e.Rs.MJ*(24/timestep)       # in MJ/m2d
+e.Rn.MJ.grass.daily   <- Station.daily$e.Rn.MJ.grass*(24/timestep) # in MJ/m2d
+ET0.daily             <- Station.daily$ET0*(24/timestep)           # in mm/d
+e.ET0.daily           <- Station.daily$e.ET0*(24/timestep)         # in mm/d
+
 detach(Station)
 
 #-------------------------------------------------------------------------------
-## Take daily averages of the time series
+#Create data frames for export of all variables for Reference ET daily calculation
 
-PPT.daily     <- aggregate(Station$Precip, FUN = sum, by = list(Date = Station$date), na.rm = "TRUE")
-Ra.MJ.daily   <- aggregate(Station$Ra.MJ,  FUN = sum, by = list(Date = Station$date), na.rm = "TRUE")
-Rs.MJ.daily   <- aggregate(Station$Rs.MJ,  FUN = sum, by = list(Date = Station$date), na.rm = "TRUE")
-Rn.MJ.daily   <- aggregate(Station$Rn.MJ.grass, FUN = sum, by =  list(Date = Station$date), na.rm = "TRUE")
-G.MJ.daily    <- aggregate(Station$G.MJ, FUN = sum, by = list(Date = Station$date), na.rm = "TRUE")
-ET0.daily     <- aggregate(Station$ET0, FUN = sum, by = list(Date = Station$date), na.rm = "TRUE") 
-e.ET0.daily   <- aggregate(Station$e.ET0, FUN = sum, by = list(Date = Station$date), na.rm = "TRUE")
+Reference.ET <- data.frame(Station$timestamp, Station$Ra.MJ, Station$Ra.W, Station$Rs.MJ, Station$Rs, 
+                           Station$Rn.MJ.grass, Station$G.MJ.grass, Station$ET0, Station$e.ET0, Station$Precip)
+colnames(Reference.ET) <- c("timestamp", "Ra.MJ", "Ra.W", "Rs.MJ", "Rs", "Rn.MJ.grass", "G.MJ.grass", 
+                            "ET0", "e.ET0", "Precip")
 
-#Create data frame for export of all variables for Reference ET daily calculation
-Reference.ET <- data.frame(ET0.daily$Date, Ra.MJ.daily$x, Rs.MJ.daily$x, Rn.MJ.daily$x, G.MJ.daily$x, ET0.daily$x, e.ET0.daily$x, PPT.daily$x)
-colnames(Reference.ET) <- c("Date", "Ra.MJ", "Rs.MJ", "Rn.MJ", "G.MJ", "ET0", "e.ET0", "Precip")
+Reference.ET.daily <- data.frame(Station.daily$date, Ra.MJ.daily, Ra.W.daily, Rs.MJ.daily, Rs.daily, 
+                                 Rn.MJ.grass.daily, G.MJ.grass.daily, ET0.daily, e.ET0.daily, PPT.daily)
+colnames(Reference.ET) <- c("timestamp", "Ra.MJ", "Ra.W", "Rs.MJ", "Rs", "Rn.MJ.grass", "G.MJ.grass", 
+                               "ET0", "e.ET0", "Precip")
 
 #Plot energy balance and ET0
 par(mfrow = c(4,1), mar=c(2,4,2,1), oma = c(3,2,1,1))
-plot(PPT.daily$Date, PPT.daily$x, type = "h", ylab = "", xaxt="n", xaxs = "i")
+plot(Station.daily$date, PPT.daily, type = "h", ylab = "", xaxt="n", xaxs = "i")
 mtext(expression(paste("PPT (mm ", d^{-1}, ")", sep = "")), side = 2, line = 3, cex = 0.75)
-axis.Date(1, at=seq(PPT.daily$Date[1], max(PPT.daily$Date), by="months"), format = "%b-%y", labels = TRUE)
-plot(Rn.MJ.daily$Date, Rn.MJ.daily$x, type = "l", ylab = "", xaxt="n", xaxs = "i")
-mtext(expression(paste("Rn (MJ", " m"^{-2}, "d"^{-1}, ")", sep = "")), side = 2, line = 3, cex = 0.75)
-axis.Date(1, at=seq(Rn.MJ.daily$Date[1], max(Rn.MJ.daily$Date), by="months"), format = "%b-%y", labels = TRUE)
-plot(G.MJ.daily$Date, G.MJ.daily$x, type = "l", ylab = "", xaxt="n", xaxs = "i")
-mtext(expression(paste("G (MJ", " m"^{-2}, "d"^{-1}, ")", sep = "")), side = 2, line = 3, cex = 0.75)
-axis.Date(1, at=seq(G.MJ.daily$Date[1], max(G.MJ.daily$Date), by="months"), format = "%b-%y", labels = TRUE)
-plot(ET0.daily$Date, ET0.daily$x, type = "l", ylab = "", xaxt="n", xaxs = "i")
+axis.Date(1, at=seq(Station.daily$date[1], max(Station.daily$date), by="months"), format = "%b-%y", labels = TRUE)
+plot(Station.daily$date, Rn.MJ.grass.daily, type = "l", ylab = "", xaxt="n", xaxs = "i")
+mtext(expression(paste("Rn-grass (MJ", " m"^{-2}, "d"^{-1}, ")", sep = "")), side = 2, line = 3, cex = 0.75)
+axis.Date(1, at=seq(Station.daily$date[1], max(Station.daily$date), by="months"), format = "%b-%y", labels = TRUE)
+plot(Station.daily$date, G.MJ.grass.daily, type = "l", ylab = "", xaxt="n", xaxs = "i")
+mtext(expression(paste("G-grass (MJ", " m"^{-2}, "d"^{-1}, ")", sep = "")), side = 2, line = 3, cex = 0.75)
+axis.Date(1, at=seq(Station.daily$date[1], max(Station.daily$date), by="months"), format = "%b-%y", labels = TRUE)
+plot(Station.daily$date, ET0.daily, type = "l", ylab = "", xaxt="n", xaxs = "i")
 mtext(expression(paste("ET"[0], " (mm d"^{-1}, ")", sep ="")), side = 2, line = 3, cex = 0.75)
-axis.Date(1, at=seq(ET0.daily$Date[1], max(ET0.daily$Date), by="months"), format = "%b-%y", labels = TRUE)
+axis.Date(1, at=seq(Station.daily$date[1], max(Station.daily$date), by="months"), format = "%b-%y", labels = TRUE)
 title(main = paste(Location, "from", start, "to", end, sep = " "), line = -1, outer = "TRUE")
 par(mfrow = c(1,1))
 
 #Export graph of time series of Rn, Vap.deficit, ETO
 dev.print(tiff, file=output.path.graph, width=1500, height=1500, res=150)
 
-#Export table
+#Export tables
 write.table(Reference.ET, file=output.path.table, sep = ",", na = "", dec = ".", row.names = FALSE, col.names = TRUE )
-write.table(Station, file=output.path.table2, sep = ",", na = "", dec = ".", row.names = FALSE, col.names = TRUE )
-
-#-------------------------------------------------------------------------------
-## Calculation of the crop albedo (alpha.crop) using Rn for grass surface and Rn measurements
-## above the crop canopy
-
-##Conversion of Net radiation (Rn) from W/m2 into MJ/m2-30min with 5% error in Rn (assumed)
-
-# Correction implemented for wind speed on the NRLite 2
-Station$Rn.corr <- Station$Rn*(1+0.01*Station$Ws^(3/4))
-
-#error in Rn.corr
-df19   <- (1+0.01*Station$Ws^(3/4))
-e.df19 <- (3/4)*0.01*(e.Ws/Station$Ws)
-Station$e.Rn.corr <- Station$Rn.corr*sqrt( ((0.05*Station$Rn)/Station$Rn)^2 + (e.df10/df10)^2 )
-
-#Rn.corr conversion to MJ/m2 30min
-Station$Rn.MJ.crop   <- Station$Rn.corr*3600*0.5*10^-6     #(W/m2)*(J/Ws)*(3600s/hr)*0.5(hr/30min) 
-Station$e.Rn.MJ.crop <- Station$e.Rn.corr*3600*0.5*10^-6
-
-Rn.MJ.daily.crop   <- aggregate(Station$Rn.MJ.crop, FUN = sum, list(Date = Station$date))
-Rs.MJ.daily        <- aggregate(Station$Rs.MJ, FUN = sum, list(Date = Station$date))
-
-attach(Station)
-alpha.crop <- 1- ((Rns.MJ - Rn.MJ.grass + Rn.MJ.crop)/Rs.MJ)
-albedo.crop <- data.frame(Station$date, Station$timestamp, ifelse(alpha.crop <0|alpha.crop>1, NA, alpha.crop))   #albedo between 0 and 1
-colnames(albedo.crop) <- c("date", "timestamp", "albedo")
-
-# Calculate the error in albedo calculation
+write.table(Reference.ET.daily, file=output.path.table2, sep = ",", na = "", dec = ".", row.names = FALSE, col.names = TRUE )
+write.table(Station, file=output.path.table3, sep = ",", na = "", dec = ".", row.names = FALSE, col.names = TRUE )
 
 #-------------------------------------------------------------------------------
 #### END #######################################################################
