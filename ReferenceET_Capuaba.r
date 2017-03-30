@@ -30,7 +30,7 @@ long     <- 50.0882                    #longitude in decimal degrees
 Lz       <- 60                         #Longitude of center of time zone
 timestep <- 0.5                        #0.5 for 30 min time step, or 1 for hourly
 Wheight  <- 3.40                       #height of the sensor measuring wind speed, in m
-a.s      <- 0.41                       #calibration factor to relate clear sky shortwave radiation (Rso)
+a.s      <- 0.71                       #calibration factor to relate clear sky shortwave radiation (Rso)
 # to extraterrestrial radiation (Ra) - site specific
 
 #input albedo assumptions or measurements
@@ -218,13 +218,16 @@ Station$e.Rn.MJ.grass <- ifelse(Station$Rso.MJ == 0, Station$e.Rns.MJ, Station$e
 # following equations (45) and (46)
 Station$G.MJ.grass <- ifelse(Station$Rs > 1, 0.1*Station$Rn.MJ.grass, 0.5*Station$Rn.MJ.grass)
 
+# error in G.MJ.grass
+Station$e.G.MJ.grass <- ifelse(Station$Rs > 1, 0.1*Station$e.Rn.MJ.grass, 0.5*Station$e.Rn.MJ.grass)
+
 Station$ET0 <- 0.408*Delta*(Rn.MJ.grass-G.MJ.grass) + 
                            gamm*(37/(Tair+273))*u2*VPD/(Delta + gamm*(1+0.34*u2))
 Station$ET0 <- signif(Station$ET0, digits = 3)        ##keep 2 significant figures (from ea)
 
 #error in ET0 with 10% error in G values
 df12   <- 0.408*Station$Delta*abs(Station$Rn.MJ-Station$G.MJ)
-e.df12 <- df12*sqrt( (Station$e.Delta/Station$Delta)^2 + ((Station$e.Rn.MR.grass + Station$e.G.MJ)/(Station$Rn.MJ.grass + Station$G.MJ))^2 )
+e.df12 <- df12*sqrt( (Station$e.Delta/Station$Delta)^2 + ((Station$e.Rn.MR.grass + Station$e.G.MJ.grass)/(Station$Rn.MJ.grass + Station$G.MJ.grass))^2 )
 df13   <- Station$gamm*37*Station$u2*Station$VPD
 e.df13 <- df13*sqrt( (Station$e.gamm/Station$gamm)^2 + (Station$e.u2/Station$u2)^2 + (Station$e.VPD/Station$VPD)^2 )
 df14   <- Tair + 273
