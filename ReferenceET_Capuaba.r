@@ -31,7 +31,7 @@ Lz       <- 60                         #Longitude of center of time zone
 timestep <- 0.5                        #0.5 for 30 min time step, or 1 for hourly
 Wheight  <- 3.40                       #height of the sensor measuring wind speed, in m
 a.s      <- 0.71                       #calibration factor to relate clear sky shortwave radiation (Rso)
-# to extraterrestrial radiation (Ra) - site specific
+                                       # to extraterrestrial radiation (Ra) - site specific
 
 #input albedo assumptions or measurements
 alpha.ref  <- 0.23
@@ -221,8 +221,8 @@ Station$G.MJ.grass <- ifelse(Station$Rs > 1, 0.1*Station$Rn.MJ.grass, 0.5*Statio
 # error in G.MJ.grass
 Station$e.G.MJ.grass <- ifelse(Station$Rs > 1, 0.1*Station$e.Rn.MJ.grass, 0.5*Station$e.Rn.MJ.grass)
 
-Station$ET0 <- 0.408*Delta*(Rn.MJ.grass-G.MJ.grass) + 
-                           gamm*(37/(Tair+273))*u2*VPD/(Delta + gamm*(1+0.34*u2))
+Station$ET0 <- 0.408*Station$Delta*(Station$Rn.MJ.grass-Station$G.MJ.grass) + 
+                     Station$gamm*(37/(Station$Tair+273))*Station$u2*Station$VPD/(Station$Delta + Station$gamm*(1+0.34*Station$u2))
 Station$ET0 <- signif(Station$ET0, digits = 3)        ##keep 2 significant figures (from ea)
 
 #error in ET0 with 10% error in G values
