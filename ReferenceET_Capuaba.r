@@ -271,7 +271,7 @@ colnames(Reference.ET) <- c("timestamp", "Ra.MJ", "Ra.W", "Rs.MJ", "Rs", "Rn.MJ.
 
 Reference.ET.daily <- data.frame(Station.daily$date, Ra.MJ.daily, Ra.W.daily, Rs.MJ.daily, Rs.daily, 
                                  Rn.MJ.grass.daily, G.MJ.grass.daily, ET0.daily, e.ET0.daily, PPT.daily)
-colnames(Reference.ET) <- c("timestamp", "Ra.MJ", "Ra.W", "Rs.MJ", "Rs", "Rn.MJ.grass", "G.MJ.grass", 
+colnames(Reference.ET.daily) <- c("date", "Ra.MJ", "Ra.W", "Rs.MJ", "Rs", "Rn.MJ.grass", "G.MJ.grass", 
                                "ET0", "e.ET0", "Precip")
 
 #Plot energy balance and ET0
