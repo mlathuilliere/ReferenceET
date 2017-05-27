@@ -212,7 +212,9 @@ Station$Rn.MJ.grass   <- Station$Rns.MJ - Station$Rnl.MJ     # in MJ/m2-30min
 Station$e.Rn.MJ.grass <- ifelse(Station$Rso.MJ == 0, Station$e.Rns.MJ, Station$e.Rns.MJ + Station$e.Rnl.MJ)    #error in Rn.MJ.grass
 
 #-------------------------------------------------------------------------------
-#Calculation of reference ET (ET0), in mm/day, equation (6)
+#Calculation of reference ET, in mm/day, equation (6)
+
+# ET0 = reference crop 0.12 m height
 
 # Calculate ET0 for every 30-min assuming G = 0.1Rn during the day and G = 0.5 Rn at night
 # following equations (45) and (46)
@@ -221,12 +223,21 @@ Station$G.MJ.grass <- ifelse(Station$Rs > 1, 0.1*Station$Rn.MJ.grass, 0.5*Statio
 # error in G.MJ.grass
 Station$e.G.MJ.grass <- ifelse(Station$Rs > 1, 0.1*Station$e.Rn.MJ.grass, 0.5*Station$e.Rn.MJ.grass)
 
-Station$ET0 <- 0.408*Station$Delta*(Station$Rn.MJ.grass-Station$G.MJ.grass) + 
-                     Station$gamm*(37/(Station$Tair+273))*Station$u2*Station$VPD/(Station$Delta + Station$gamm*(1+0.34*Station$u2))
-Station$ET0 <- signif(Station$ET0, digits = 3)        ##keep 2 significant figures (from ea)
+# Calculate ET0 for 2 differetn reference grasses (Allen et al., 2011)
+# Revised FAO guidelines for short grass hourly measurements or less, height = 0.12 m, resistance = 50 s/m
+# Tall grass: height = 0.5 m, resistance = 35 s/m
+
+# short grass reference
+Station$ET0.sg <- ((1/Station$lambda)*Station$Delta*(Station$Rn.MJ.grass-Station$G.MJ.grass) + 
+                     (18.60*Station$gamm*Station$u2*Station$VPD)/(Station$Tair+273))/(Station$Delta + Station$gamm*(1+0.24*Station$u2))
+Station$ET0.sg <- signif(Station$ET0.sg, digits = 3)        ##keep 2 significant figures (from ea)
+
+Station$ET0.tg <- (1/Station$lambda)*Station$Delta*(Station$Rn.MJ.grass-Station$G.MJ.grass) + 
+                     (35.13*Station$gamm*Station$u2*Station$VPD/(Station$Tair+273))/(Station$Delta + Station$gamm*(1+0.32*Station$u2))
+Station$ET0.tg <- signif(Station$ET0.sg, digits = 3)        ##keep 2 significant figures (from ea)
 
 #error in ET0 with 10% error in G values
-df12   <- 0.408*Station$Delta*abs(Station$Rn.MJ-Station$G.MJ)
+df12   <- (1/Station$lambda)*Station$Delta*abs(Station$Rn.MJ-Station$G.MJ)
 e.df12 <- df12*sqrt( (Station$e.Delta/Station$Delta)^2 + ((Station$e.Rn.MR.grass + Station$e.G.MJ.grass)/(Station$Rn.MJ.grass + Station$G.MJ.grass))^2 )
 df13   <- Station$gamm*37*Station$u2*Station$VPD
 e.df13 <- df13*sqrt( (Station$e.gamm/Station$gamm)^2 + (Station$e.u2/Station$u2)^2 + (Station$e.VPD/Station$VPD)^2 )
@@ -241,7 +252,8 @@ e.df17 <- 0.34*Station$e.u2
 df18   <- Station$gamm*df17
 e.df18 <- df18*sqrt( (Station$e.gamm/Station$gamm)^2 + (e.df17/df17)^2 )
 
-Station$e.ET0 <- abs(Station$ET0)*sqrt( (e.df18/df18)^2 + (e.df15/df15)^2 )
+Station$e.ET0.sg <- abs(Station$ET0.sg)*sqrt( (e.df18/df18)^2 + (e.df15/df15)^2 )
+Station$e.ET0.tg <- abs(Station$ET0.tg)*sqrt( (e.df18/df18)^2 + (e.df15/df15)^2 )
 
 ## Obtain daily average of input values to compute ET0 per day 
 Station.daily     <- timeAverage(Station, avg.time = "day", statistic = "mean", na.rm = TRUE)
@@ -256,8 +268,10 @@ Rn.MJ.grass.daily     <- Station.daily$Rn.MJ.grass*(24/timestep)   # in MJ/m2d
 G.MJ.grass.daily      <- Station.daily$G.MJ.grass*(24/timestep)    # in MJ/m2d
 e.Rs.MJ.daily         <- Station.daily$e.Rs.MJ*(24/timestep)       # in MJ/m2d
 e.Rn.MJ.grass.daily   <- Station.daily$e.Rn.MJ.grass*(24/timestep) # in MJ/m2d
-ET0.daily             <- Station.daily$ET0*(24/timestep)           # in mm/d
-e.ET0.daily           <- Station.daily$e.ET0*(24/timestep)         # in mm/d
+ET0.daily.sg             <- Station.daily$ET0.sg*(24/timestep)           # in mm/d
+e.ET0.daily.sg           <- Station.daily$e.ET0.sg*(24/timestep)         # in mm/d
+ET0.daily.tg             <- Station.daily$ET0.tg*(24/timestep)           # in mm/d
+e.ET0.daily.tg           <- Station.daily$e.ET0.tg*(24/timestep)         # in mm/d
 
 detach(Station)
 
@@ -265,14 +279,16 @@ detach(Station)
 #Create data frames for export of all variables for Reference ET daily calculation
 
 Reference.ET <- data.frame(Station$timestamp, Station$Ra.MJ, Station$Ra.W, Station$Rs.MJ, Station$Rs, 
-                           Station$Rn.MJ.grass, Station$G.MJ.grass, Station$ET0, Station$e.ET0, Station$Precip, Station$VPD)
+                           Station$Rn.MJ.grass, Station$G.MJ.grass, Station$ET0.sg, Station$e.ET0.sg, 
+                           Station$ET0.tg, Station$e.ET0.tg, Station$Precip, Station$VPD)
 colnames(Reference.ET) <- c("timestamp", "Ra.MJ", "Ra.W", "Rs.MJ", "Rs", "Rn.MJ.grass", "G.MJ.grass", 
-                            "ET0", "e.ET0", "Precip", "VPD")
+                            "ET0.sg", "e.ET0.sg", "ET0.tg", "e.ET0.tg","Precip", "VPD")
 
 Reference.ET.daily <- data.frame(Station.daily$date, Ra.MJ.daily, Ra.W.daily, Rs.MJ.daily, Rs.daily, 
-                                 Rn.MJ.grass.daily, G.MJ.grass.daily, ET0.daily, e.ET0.daily, PPT.daily)
+                                 Rn.MJ.grass.daily, G.MJ.grass.daily, ET0.daily.sg, e.ET0.daily.sg, 
+                                 ET0.daily.tg, e.ET0.daily.tg, PPT.daily)
 colnames(Reference.ET.daily) <- c("date", "Ra.MJ", "Ra.W", "Rs.MJ", "Rs", "Rn.MJ.grass", "G.MJ.grass", 
-                               "ET0", "e.ET0", "Precip")
+                               "ET0.sg", "e.ET0.sg", "ET0.tg", "e.ET0.tg", "Precip")
 
 #Plot energy balance and ET0
 par(mfrow = c(4,1), mar=c(2,4,2,1), oma = c(3,2,1,1))
@@ -285,7 +301,8 @@ axis.Date(1, at=seq(Station.daily$date[1], max(Station.daily$date), by="months")
 plot(Station.daily$date, G.MJ.grass.daily, type = "l", ylab = "", xaxt="n", xaxs = "i")
 mtext(expression(paste("G-grass (MJ", " m"^{-2}, "d"^{-1}, ")", sep = "")), side = 2, line = 3, cex = 0.75)
 axis.Date(1, at=seq(Station.daily$date[1], max(Station.daily$date), by="months"), format = "%b-%y", labels = TRUE)
-plot(Station.daily$date, ET0.daily, type = "l", ylab = "", xaxt="n", xaxs = "i")
+plot(Station.daily$date, ET0.daily.sg, type = "l", ylab = "", xaxt="n", xaxs = "i")
+lines(Station.daily$date, ET0.daily.tg, type = "l", col = "blue", ylab = "", xaxt="n", xaxs = "i")
 mtext(expression(paste("ET"[0], " (mm d"^{-1}, ")", sep ="")), side = 2, line = 3, cex = 0.75)
 axis.Date(1, at=seq(Station.daily$date[1], max(Station.daily$date), by="months"), format = "%b-%y", labels = TRUE)
 title(main = paste(Location, "from", start, "to", end, sep = " "), line = -1, outer = "TRUE")
