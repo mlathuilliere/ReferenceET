@@ -1,5 +1,6 @@
 rm(list = ls())
 library(openair)
+library(xts)
 
 #-------------------------------------------------------------------------------
 ## Input/output file paths
@@ -259,19 +260,19 @@ Station$e.ET0.tg <- abs(Station$ET0.tg)*sqrt( (e.df18/df18)^2 + (e.df15/df15)^2 
 Station.daily     <- timeAverage(Station, avg.time = "day", statistic = "mean", na.rm = TRUE)
 
 # Provide daily sum of precipitation and energy variables
-PPT.daily             <- Station.daily$Precip*(24/timestep)        # in mm/d
-Ra.MJ.daily           <- Station.daily$Ra.MJ*(24/timestep)         # in MJ/m2d
-Ra.W.daily            <- Station.daily$Ra.W*(24/timestep)          # in W/m2
-Rs.MJ.daily           <- Station.daily$Rs.MJ*(24/timestep)         # in MJ/m2d
-Rs.daily              <- Station.daily$Rs*(24/timestep)            # in W/m2
-Rn.MJ.grass.daily     <- Station.daily$Rn.MJ.grass*(24/timestep)   # in MJ/m2d
-G.MJ.grass.daily      <- Station.daily$G.MJ.grass*(24/timestep)    # in MJ/m2d
-e.Rs.MJ.daily         <- Station.daily$e.Rs.MJ*(24/timestep)       # in MJ/m2d
-e.Rn.MJ.grass.daily   <- Station.daily$e.Rn.MJ.grass*(24/timestep) # in MJ/m2d
-ET0.daily.sg             <- Station.daily$ET0.sg*(24/timestep)           # in mm/d
-e.ET0.daily.sg           <- Station.daily$e.ET0.sg*(24/timestep)         # in mm/d
-ET0.daily.tg             <- Station.daily$ET0.tg*(24/timestep)           # in mm/d
-e.ET0.daily.tg           <- Station.daily$e.ET0.tg*(24/timestep)         # in mm/d
+PPT.daily             <- aggregate(Station$Precip, by=list(as.Date(Station$date)), sum, na.rm = TRUE)        # in mm/d
+Ra.MJ.daily           <- aggregate(Station$Ra.MJ, by=list(as.Date(Station$date)), sum, na.rm = TRUE)          # in MJ/m2d
+Ra.W.daily            <- aggregate(Station$Ra.W, by=list(as.Date(Station$date)), sum, na.rm = TRUE)          # in W/m2
+Rs.MJ.daily           <- aggregate(Station$Rs.MJ, by=list(as.Date(Station$date)), sum, na.rm = TRUE)         # in MJ/m2d
+Rs.daily              <- aggregate(Station$Rs, by=list(as.Date(Station$date)), sum, na.rm = TRUE)             # in W/m2
+Rn.MJ.grass.daily     <- aggregate(Station$Rn.MJ, by=list(as.Date(Station$date)), sum, na.rm = TRUE)    # in MJ/m2d
+G.MJ.grass.daily      <- aggregate(Station$G.MJ, by=list(as.Date(Station$date)), sum, na.rm = TRUE)     # in MJ/m2d
+e.Rs.MJ.daily         <- aggregate(Station$e.Rs.MJ, by=list(as.Date(Station$date)), sum, na.rm = TRUE)        # in MJ/m2d
+e.Rn.MJ.grass.daily   <- aggregate(Station$e.Rn.MJ.grass, by=list(as.Date(Station$date)), sum, na.rm = TRUE)  # in MJ/m2d
+ET0.daily.sg          <- aggregate(Station$ET0.sg, by=list(as.Date(Station$date)), sum, na.rm = TRUE)            # in mm/d
+e.ET0.daily.sg        <- aggregate(Station$e.ET0.sg, by=list(as.Date(Station$date)), sum, na.rm = TRUE)          # in mm/d
+ET0.daily.tg          <- aggregate(Station$ET0.tg, by=list(as.Date(Station$date)), sum, na.rm = TRUE)            # in mm/d
+e.ET0.daily.tg        <- aggregate(Station$e.ET0.tg, by=list(as.Date(Station$date)), sum, na.rm = TRUE)          # in mm/d
 
 detach(Station)
 
@@ -292,19 +293,19 @@ colnames(Reference.ET.daily) <- c("date", "Ra.MJ", "Ra.W", "Rs.MJ", "Rs", "Rn.MJ
 
 #Plot energy balance and ET0
 par(mfrow = c(4,1), mar=c(2,4,2,1), oma = c(3,2,1,1))
-plot(Station.daily$date, PPT.daily, type = "h", ylab = "", xaxt="n", xaxs = "i")
+plot(Station.daily$date, PPT.daily$x, type = "h", ylab = "", xaxt="n", xaxs = "i")
 mtext(expression(paste("PPT (mm ", d^{-1}, ")", sep = "")), side = 2, line = 3, cex = 0.75)
-axis.Date(1, at=seq(Station.daily$date[1], max(Station.daily$date), by="months"), format = "%b-%y", labels = TRUE)
-plot(Station.daily$date, Rn.MJ.grass.daily, type = "l", ylab = "", xaxt="n", xaxs = "i")
+axis.POSIXct(1, at=seq(Station.daily$date[1], max(Station.daily$date), by="months"), format = "%b-%y", labels = TRUE)
+plot(Station.daily$date, Rn.MJ.grass.daily$x, type = "l", ylab = "", xaxt="n", xaxs = "i")
 mtext(expression(paste("Rn-grass (MJ", " m"^{-2}, "d"^{-1}, ")", sep = "")), side = 2, line = 3, cex = 0.75)
-axis.Date(1, at=seq(Station.daily$date[1], max(Station.daily$date), by="months"), format = "%b-%y", labels = TRUE)
-plot(Station.daily$date, G.MJ.grass.daily, type = "l", ylab = "", xaxt="n", xaxs = "i")
+axis.POSIXct(1, at=seq(Station.daily$date[1], max(Station.daily$date), by="months"), format = "%b-%y", labels = TRUE)
+plot(Station.daily$date, G.MJ.grass.daily$x, type = "l", ylab = "", xaxt="n", xaxs = "i")
 mtext(expression(paste("G-grass (MJ", " m"^{-2}, "d"^{-1}, ")", sep = "")), side = 2, line = 3, cex = 0.75)
-axis.Date(1, at=seq(Station.daily$date[1], max(Station.daily$date), by="months"), format = "%b-%y", labels = TRUE)
-plot(Station.daily$date, ET0.daily.sg, type = "l", ylab = "", xaxt="n", xaxs = "i")
-lines(Station.daily$date, ET0.daily.tg, type = "l", col = "blue", ylab = "", xaxt="n", xaxs = "i")
+axis.POSIXct(1, at=seq(Station.daily$date[1], max(Station.daily$date), by="months"), format = "%b-%y", labels = TRUE)
+plot(Station.daily$date, ET0.daily.sg$x, type = "l", ylab = "", xaxt="n", xaxs = "i")
+lines(Station.daily$date, ET0.daily.tg$x, type = "l", col = "blue", ylab = "", xaxt="n", xaxs = "i")
 mtext(expression(paste("ET"[0], " (mm d"^{-1}, ")", sep ="")), side = 2, line = 3, cex = 0.75)
-axis.Date(1, at=seq(Station.daily$date[1], max(Station.daily$date), by="months"), format = "%b-%y", labels = TRUE)
+axis.POSIXct(1, at=seq(Station.daily$date[1], max(Station.daily$date), by="months"), format = "%b-%y", labels = TRUE)
 title(main = paste(Location, "from", start, "to", end, sep = " "), line = -1, outer = "TRUE")
 par(mfrow = c(1,1))
 
