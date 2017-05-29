@@ -16,8 +16,7 @@ Important notes:
 
 1) ET0.sg (mm/30min or mm/day) refers to evapotranspiration of the short grass reference surface
    ET0.tg (mm/30min or mm/day) refers to evapotranspiration of the tall grass reference surface
-   In this calculation, these differences are minor (less than the measurement error)
-
+   
 2) The values of ET0 are calculated with error bars (e.ET0) obtained by propagating sensor measurement error obtained from the sensor specifications
 
    Sensors used:

@@ -230,12 +230,12 @@ Station$e.G.MJ.grass <- ifelse(Station$Rs > 1, 0.1*Station$e.Rn.MJ.grass, 0.5*St
 
 # short grass reference
 Station$ET0.sg <- ((1/Station$lambda)*Station$Delta*(Station$Rn.MJ.grass-Station$G.MJ.grass) + 
-                     (18.60*Station$gamm*Station$u2*Station$VPD)/(Station$Tair+273))/(Station$Delta + Station$gamm*(1+0.24*Station$u2))
+                     (18.60*Station$gamm*Station$u2*Station$VPD)/(Station$Tair+273.15))/(Station$Delta + Station$gamm*(1+0.24*Station$u2))
 Station$ET0.sg <- signif(Station$ET0.sg, digits = 3)        ##keep 2 significant figures (from ea)
 
 Station$ET0.tg <- (1/Station$lambda)*Station$Delta*(Station$Rn.MJ.grass-Station$G.MJ.grass) + 
-                     (35.13*Station$gamm*Station$u2*Station$VPD/(Station$Tair+273))/(Station$Delta + Station$gamm*(1+0.32*Station$u2))
-Station$ET0.tg <- signif(Station$ET0.sg, digits = 3)        ##keep 2 significant figures (from ea)
+                     (35.13*Station$gamm*Station$u2*Station$VPD/(Station$Tair+273.15))/(Station$Delta + Station$gamm*(1+0.32*Station$u2))
+Station$ET0.tg <- signif(Station$ET0.tg, digits = 3)        ##keep 2 significant figures (from ea)
 
 #error in ET0 with 10% error in G values
 df12   <- (1/Station$lambda)*Station$Delta*abs(Station$Rn.MJ-Station$G.MJ)
@@ -285,9 +285,9 @@ Reference.ET <- data.frame(Station$timestamp, Station$Ra.MJ, Station$Ra.W, Stati
 colnames(Reference.ET) <- c("timestamp", "Ra.MJ", "Ra.W", "Rs.MJ", "Rs", "Rn.MJ.grass", "G.MJ.grass", 
                             "ET0.sg", "e.ET0.sg", "ET0.tg", "e.ET0.tg","Precip", "VPD")
 
-Reference.ET.daily <- data.frame(Station.daily$date, Ra.MJ.daily, Ra.W.daily, Rs.MJ.daily, Rs.daily, 
-                                 Rn.MJ.grass.daily, G.MJ.grass.daily, ET0.daily.sg, e.ET0.daily.sg, 
-                                 ET0.daily.tg, e.ET0.daily.tg, PPT.daily)
+Reference.ET.daily <- data.frame(Station.daily$date, Ra.MJ.daily$x, Ra.W.daily$x, Rs.MJ.daily$x, Rs.daily$x, 
+                                 Rn.MJ.grass.daily$x, G.MJ.grass.daily$x, ET0.daily.sg$x, e.ET0.daily.sg$x, 
+                                 ET0.daily.tg$x, e.ET0.daily.tg$x, PPT.daily$x)
 colnames(Reference.ET.daily) <- c("date", "Ra.MJ", "Ra.W", "Rs.MJ", "Rs", "Rn.MJ.grass", "G.MJ.grass", 
                                "ET0.sg", "e.ET0.sg", "ET0.tg", "e.ET0.tg", "Precip")
 
@@ -306,6 +306,7 @@ plot(Station.daily$date, ET0.daily.sg$x, type = "l", ylab = "", xaxt="n", xaxs =
 lines(Station.daily$date, ET0.daily.tg$x, type = "l", col = "blue", ylab = "", xaxt="n", xaxs = "i")
 mtext(expression(paste("ET"[0], " (mm d"^{-1}, ")", sep ="")), side = 2, line = 3, cex = 0.75)
 axis.POSIXct(1, at=seq(Station.daily$date[1], max(Station.daily$date), by="months"), format = "%b-%y", labels = TRUE)
+legend(as.POSIXct("2015-09-20"),13, legend = c("short", "tall"), bty = "n", lty = 1, col = c("black", "blue"), cex = 1.00, ncol = 2) 
 title(main = paste(Location, "from", start, "to", end, sep = " "), line = -1, outer = "TRUE")
 par(mfrow = c(1,1))
 
