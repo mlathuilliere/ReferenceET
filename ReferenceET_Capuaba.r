@@ -234,7 +234,7 @@ Station$ET0.sg <- ((1/Station$lambda)*Station$Delta*(Station$Rn.MJ.grass-Station
 Station$ET0.sg <- signif(Station$ET0.sg, digits = 3)        ##keep 2 significant figures (from ea)
 
 Station$ET0.tg <- (1/Station$lambda)*Station$Delta*(Station$Rn.MJ.grass-Station$G.MJ.grass) + 
-                     (35.13*Station$gamm*Station$u2*Station$VPD/(Station$Tair+273.15))/(Station$Delta + Station$gamm*(1+0.32*Station$u2))
+                     (35.13*Station$gamm*Station$u2*Station$VPD/(Station$Tair+273.15))/(Station$Delta + Station$gamm*(1+0.27*Station$u2))
 Station$ET0.tg <- signif(Station$ET0.tg, digits = 3)        ##keep 2 significant figures (from ea)
 
 #error in ET0 with 10% error in G values
