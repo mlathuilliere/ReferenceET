@@ -1,7 +1,6 @@
 rm(list = ls())
 library(openair)
-library(xts)
-
+ 
 #-------------------------------------------------------------------------------
 ## Input/output file paths
 
