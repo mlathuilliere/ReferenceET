@@ -3,7 +3,7 @@
 Calculation of reference ET (ET0) as per FAO guidelines Irrigation and Drainage Paper 56 (FAO56) by Allen et al. (1998) http://www.fao.org/docrep/X0490E/x0490e00.htm#Contents, reviewed in Allen et al. (2011):
 
 For hourly measurements (or less)
-Short grass reference crop: albedo: 0.23, height: 0.12 m, surface resistance: 50 s/m
+Short grass reference crop: albedo: 0.23, height: 0.12 m, surface resistance: 50 s/m (day) and 200 s/m (night)
 Tall grass reference crop: albedo: 0.23, height: 0.50 m, surface resistance: 30 s/m
 
 For daily measurements surface resistance can increase to 70 s/m (short grass) and 45 s/m (tall grass)
@@ -35,3 +35,6 @@ Allen, R.G. et al (2011) Evapotranspiration information reporting: I. Factors fo
 Allen, R.G. et al. (1998) Crop evapotranspiration: guidelines for computing crop water requirements, Food and Agriculture Organization of the United Nations,http://www.fao.org/docrep/X0490E/X0490E00.htm
    
 Campbell, G.S., and Norman, J.M. (1998) An introduction to environmental biophysics, New York: Springer, pp 286.
+
+Perreira, L.S. et al. (2015) Crop evapotranspiration estimation with FAO56: Past and future.
+Agricultural Water Management 14: 4-20.

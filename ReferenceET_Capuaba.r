@@ -223,13 +223,17 @@ Station$G.MJ.grass <- ifelse(Station$Rs > 1, 0.1*Station$Rn.MJ.grass, 0.5*Statio
 # error in G.MJ.grass
 Station$e.G.MJ.grass <- ifelse(Station$Rs > 1, 0.1*Station$e.Rn.MJ.grass, 0.5*Station$e.Rn.MJ.grass)
 
-# Calculate ET0 for 2 differetn reference grasses (Allen et al., 2011)
-# Revised FAO guidelines for short grass hourly measurements or less, height = 0.12 m, resistance = 50 s/m
+# Calculate ET0 for 2 different reference grasses (Allen et al., 2011)
+# Revised FAO guidelines for short grass hourly measurements or less, 
+# height = 0.12 m, resistance = 50 s/m (day) and 200 s/m (night) according to Perreira et al. (2015)
 # Tall grass: height = 0.5 m, resistance = 35 s/m
 
 # short grass reference
-Station$ET0.sg <- ((1/Station$lambda)*Station$Delta*(Station$Rn.MJ.grass-Station$G.MJ.grass) + 
-                     (18.60*Station$gamm*Station$u2*Station$VPD)/(Station$Tair+273.15))/(Station$Delta + Station$gamm*(1+0.24*Station$u2))
+Station$ET0.sg <- ifelse(Station$Rs > 1, 
+                         ((1/Station$lambda)*Station$Delta*(Station$Rn.MJ.grass-Station$G.MJ.grass) + 
+                          (18.60*Station$gamm*Station$u2*Station$VPD)/(Station$Tair+273.15))/(Station$Delta + Station$gamm*(1+0.24*Station$u2)),
+                         ((1/Station$lambda)*Station$Delta*(Station$Rn.MJ.grass-Station$G.MJ.grass) + 
+                          (18.60*Station$gamm*Station$u2*Station$VPD)/(Station$Tair+273.15))/(Station$Delta + Station$gamm*(1+0.96*Station$u2)))
 Station$ET0.sg <- signif(Station$ET0.sg, digits = 3)        ##keep 2 significant figures (from ea)
 
 Station$ET0.tg <- (1/Station$lambda)*Station$Delta*(Station$Rn.MJ.grass-Station$G.MJ.grass) + 
