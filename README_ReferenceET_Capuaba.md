@@ -36,5 +36,5 @@ Allen, R.G. et al. (1998) Crop evapotranspiration: guidelines for computing crop
    
 Campbell, G.S., and Norman, J.M. (1998) An introduction to environmental biophysics, New York: Springer, pp 286.
 
-Perreira, L.S. et al. (2015) Crop evapotranspiration estimation with FAO56: Past and future.
+Pereira, L.S. et al. (2015) Crop evapotranspiration estimation with FAO56: Past and future.
 Agricultural Water Management 14: 4-20.
